@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mixtape for You — Romantic</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* --- Basic + background --- */
+    :root { --rose1: #ff6b92; --rose2: #ff4d6d; --bg-900: #070708; --accent: #38b6ff; }
+    html { scroll-behavior: smooth; }
+    body{
+      margin:0; min-height:100vh; color:#fff;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+      background: linear-gradient(120deg, rgba(7,7,10,1) 0%, rgba(11,9,12,1) 40%);
+      overflow-x: hidden;
+    }
+    .bg-animated{
+      position:fixed; inset:0; z-index:-20;
+      background: radial-gradient(600px 400px at 10% 12%, rgba(124,58,237,0.08), transparent 20%),
+                  radial-gradient(700px 500px at 92% 92%, rgba(255,77,109,0.06), transparent 15%);
+      animation: floatBg 14s linear infinite alternate;
+    }
+    @keyframes floatBg { 0%{ transform: translateY(0)} 100%{ transform: translateY(-20px) } }
+
+    /* --- Glass + modal aura --- */
+    .glass { background: rgba(255,255,255,0.04); backdrop-filter: blur(10px); }
+    .modalAura { box-shadow: 0 10px 60px rgba(244,63,94,0.12), 0 2px 16px rgba(124,58,237,0.05); border:1px solid rgba(255,255,255,0.03); }
+
+    /* --- Disc spin (class-based) --- */
+    .spinning { animation: spin 8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* --- Hearts (soft romantic) --- */
+    .hearts-layer{ position:fixed; inset:0; pointer-events:none; z-index:60; }
+    .heart{
+      position:absolute;
+      width:20px; height:20px;
+      background: var(--rose2);
+      transform: rotate(var(--rot,45deg));
+      border-radius:2px;
+      filter: drop-shadow(0 8px 26px rgba(255,77,109,0.35));
+      opacity:0;
+      will-change: transform, opacity;
+    }
+    .heart::before, .heart::after{
+      content:""; position:absolute; width:100%; height:100%; background:var(--rose2); border-radius:50%;
+    }
+    .heart::before{ top:-50%; left:0; }
+    .heart::after{ left:-50%; top:0; }
+
+    /* float keyframes: gentle rise, small drift, fade-in & fade-out (shorter for snappier effect) */
+    @keyframes gentleRise {
+      0% { transform: translateY(0) translateX(0) rotate(var(--rot,45deg)) scale(0.96); opacity:0; }
+      6% { opacity:1; }
+      100% { transform: translateY(-110vh) translateX(var(--drift,0px)) rotate(var(--rot,45deg)) scale(1.12); opacity:0; }
+    }
+
+    /* typewriter caret (only when typing) */
+    .caret[data-typing]::after{ content:'|'; margin-left:6px; opacity:0.95; animation: blink 1s steps(1) infinite; }
+    @keyframes blink { 50% { opacity: 0 } }
+
+    /* responsive */
+    @media (max-width:640px) {
+      #sidebar { width: 88vw; }
+      .playerCard { padding: 18px; }
+    }
+
+    /* ============================
+       NEW: Cinematic title section
+       ============================ */
+    .title-section {
+      text-align: center;
+      margin-bottom: 20px;
+      padding: 15px;
+      color: #fff;
+      text-shadow: 0 0 12px rgba(255,255,255,0.5);
+      overflow: hidden;
+    }
+    .title-section h1, 
+    .title-section p {
+      opacity: 0;
+      transform: translateY(40px);
+      animation: fadeUp 1.5s ease-out forwards;
+    }
+    .title-section h1 {
+      font-size: 2rem;
+      margin-bottom: 8px;
+      font-weight: bold;
+      animation-delay: 0.5s; /* Title comes first */
+    }
+    .title-section p {
+      font-size: 1rem;
+      max-width: 700px;
+      margin: 0 auto;
+      line-height: 1.5;
+      opacity: 0.9;
+      animation-delay: 2s; /* Tagline comes later */
+    }
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ==========================================
+       NEW: Soft GlowUp aura (separate overlay)
+       ========================================== */
+    .aura { 
+      position: fixed; inset: 0; pointer-events: none; z-index: -19;
+      opacity: 0; filter: blur(40px);
+      background:
+        radial-gradient(600px 600px at 20% 30%, rgba(255,77,109,0.18), transparent 60%),
+        radial-gradient(700px 700px at 80% 80%, rgba(124,58,237,0.16), transparent 60%),
+        radial-gradient(500px 500px at 50% 10%, rgba(56,182,255,0.14), transparent 60%);
+      transition: opacity .6s ease;
+    }
+    body.glowup .aura {
+      opacity: 1;
+      animation: auraPulse 8s ease-in-out infinite alternate;
+    }
+    @keyframes auraPulse {
+      0%   { filter: blur(40px); transform: scale(1);   opacity: 0.9; }
+      50%  { filter: blur(54px); transform: scale(1.03); opacity: 1;   }
+      100% { filter: blur(40px); transform: scale(1);   opacity: 0.9; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-animated" aria-hidden="true"></div>
+  <!-- NEW: Aura overlay (sits above bg, below everything else) -->
+  <div id="aura" class="aura" aria-hidden="true"></div>
+
+  <!-- Soft hearts layer -->
+  <div id="heartsLayer" class="hearts-layer" aria-hidden="true"></div>
+
+  <!-- Header -->
+  <header class="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-4 py-3 bg-black/40 backdrop-blur border-b border-white/5">
+    <div class="flex items-center gap-3">
+      <button id="menuBtn" class="px-2 py-1 rounded-lg hover:bg-white/5 focus:outline-none" aria-label="Toggle playlist">
+        <!-- hamburger -->
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <h1 class="font-semibold">Mixtape for You</h1>
+      <span class="text-xs text-white/60">Romantic Shuffle</span>
+    </div>
+    <div class="text-xs text-white/50">Enjoy the mix ✨</div>
+  </header>
+
+  <!-- Mobile overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black/60 opacity-0 pointer-events-none transition-opacity z-50 md:hidden"></div>
+
+  <!-- Right Sidebar (start hidden on mobile to avoid flash) -->
+  <aside id="sidebar" class="fixed inset-y-0 right-0 z-50 w-80 translate-x-full md:translate-x-0 transform transition-transform duration-300 bg-[#0f0f10]/90 glass border-l border-white/5">
+    <div class="pt-16 pb-6 px-4">
+      <h2 class="text-lg font-semibold mb-3">Playlist</h2>
+      <ul id="playlist" class="space-y-2 overflow-y-auto max-h-[calc(100vh-140px)] pr-2">
+        <!-- injected items: Song 1..Song 6 -->
+      </ul>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="pt-20 md:pr-80 px-4">
+    <div class="max-w-2xl mx-auto">
+
+      <!-- NEW: Cinematic title + tagline -->
+      <section class="title-section">
+        <h1>Here’s A Mixtape for You</h1>
+        <p>
+          Whenever you want to find peace for a moment remember you come to me
+          <br>
+          <small>(only if I start throwing nonsense advice remember you can come to this page!)</small>
+        </p>
+      </section>
+
+      <section class="playerCard glass rounded-3xl p-8 modalAura">
+        <div class="flex flex-col items-center text-center">
+          <!-- Disc -->
+          <div id="disc" class="w-56 h-56 rounded-full bg-gradient-to-br from-rose-500 to-rose-700 ring-4 ring-rose-500/20 shadow-[0_0_40px_rgba(244,63,94,0.18)] grid place-items-center mb-6">
+            <div class="w-12 h-12 rounded-full bg-black/60 ring-2 ring-white/20"></div>
+          </div>
+
+          <h2 id="nowTitle" class="text-2xl font-bold mb-1">Song 1</h2>
+          <p class="text-white/60 mb-4">for you 💖</p>
+
+          <!-- Visualizer canvas -->
+          <canvas id="visualizer" width="600" height="80" class="w-full rounded-md mb-3" aria-hidden="true"></canvas>
+
+          <!-- Progress -->
+          <div class="w-full mb-4">
+            <input id="seek" type="range" min="0" max="100" value="0" class="w-full accent-rose-500" aria-label="Seek" />
+            <div class="flex justify-between text-xs text-white/60 mt-1"><span id="cur">0:00</span><span id="dur">0:00</span></div>
+          </div>
+
+          <!-- Controls -->
+          <div class="flex items-center gap-4">
+            <button id="prev" aria-label="Previous" class="px-4 py-2 rounded-full hover:bg-white/5">⏮</button>
+            <button id="shuffle" aria-label="Shuffle" class="px-3 py-2 rounded-full hover:bg-white/5" aria-pressed="true">🔀</button>
+            <button id="play" aria-label="Play or Pause" class="px-6 py-2 rounded-full bg-rose-600 hover:bg-rose-700 font-semibold shadow">▶</button>
+            <button id="next" aria-label="Next" class="px-4 py-2 rounded-full hover:bg-white/5">⏭</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <!-- Bottom center buttons -->
+  <div class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3">
+    <button id="glowBtn" class="px-4 py-3 rounded-full bg-rose-600 hover:bg-rose-500 shadow-lg text-white font-semibold" aria-label="Toggle hearts glow">💖 Glow Up</button>
+    <button id="msgBtn" class="px-4 py-3 rounded-full bg-rose-200/10 hover:bg-rose-500/20 border border-rose-600 text-rose-200" aria-label="Show special message">💌 Special Message</button>
+  </div>
+
+  <!-- Message Modal (blur + glow) -->
+  <div id="msgModal" class="fixed inset-0 z-60 hidden items-center justify-center" role="dialog" aria-modal="true" aria-labelledby="msgTitle" aria-describedby="messageText">
+    <div class="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
+    <div class="relative z-60 max-w-lg w-[92%] bg-gradient-to-br from-rose-800/90 via-rose-700/80 to-rose-600/75 rounded-2xl p-6 modalAura glass">
+      <button id="closeMsg" class="absolute -top-3 -right-3 bg-black/60 px-3 py-1 rounded-full" aria-label="Close message">✖</button>
+      <h3 id="msgTitle" class="text-xl font-bold mb-3">A little love note</h3>
+      <p id="messageText" class="text-white/90 text-lg caret" data-typing="false"></p>
+    </div>
+  </div>
+
+  <script>
+  /* -------------------------
+     Fixed & optimized JS — triple-checked
+     ------------------------- */
+
+  // Playlist (Song 1..Song 6) — make sure your files are placed in a folder named "songs" next to this HTML
+  const songs = [
+    { name: 'Song 1', src: 'songs/song1.mp3' },
+    { name: 'Song 2', src: 'songs/song2.mp3' },
+    { name: 'Song 3', src: 'songs/song3.mp3' },
+    { name: 'Song 4', src: 'songs/song4.mp3' },
+    { name: 'Song 5', src: 'songs/song5.mp3' },
+    { name: 'Song 6', src: 'songs/song6.mp3' }
+  ];
+
+  // Elements
+  const playlistEl = document.getElementById('playlist');
+  const menuBtn = document.getElementById('menuBtn');
+  const overlay = document.getElementById('overlay');
+  const sidebar = document.getElementById('sidebar');
+
+  // Single audio element (id fixed)
+  const audio = document.createElement('audio'); audio.id = 'mainAudio'; audio.preload = 'metadata'; audio.style.display = 'none'; document.body.appendChild(audio);
+  const nowTitle = document.getElementById('nowTitle');
+  const playBtn = document.getElementById('play');
+  const prevBtn = document.getElementById('prev');
+  const nextBtn = document.getElementById('next');
+  const shuffleBtn = document.getElementById('shuffle');
+  const seek = document.getElementById('seek');
+  const cur = document.getElementById('cur');
+  const dur = document.getElementById('dur');
+  const disc = document.getElementById('disc');
+
+  const canvas = document.getElementById('visualizer');
+  const ctx = canvas.getContext('2d');
+  let audioCtx = null, analyser = null, sourceNode = null, dataArray = null, bufferLength = 0, animationId = null;
+
+  // Hearts
+  const heartsLayer = document.getElementById('heartsLayer');
+  const glowBtn = document.getElementById('glowBtn');
+  let glowOn = false; let glowInterval = null;
+
+  // Messages modal
+  const msgBtn = document.getElementById('msgBtn');
+  const msgModal = document.getElementById('msgModal');
+  const closeMsg = document.getElementById('closeMsg');
+  const messageText = document.getElementById('messageText');
+  const messages = [
+    "You’re my favorite song — on repeat in my heart.",
+    "Every melody reminds me of you; study well, love.",
+    "No matter the shuffle, you’ll always be my number one.",
+    "If music is time, then I’ll spend forever with you.",
+    "This mixtape is a soft hug across the miles."
+  ];
+  let typingTimer = null;
+
+  // State
+  let current = 0;
+  let shuffle = true;
+  let isPlaying = false;
+
+  // Shuffle-bag to avoid immediate repeats
+  let shuffleOrder = []; let shufflePointer = 0;
+  function buildShuffleOrder(){
+    shuffleOrder = songs.map((_,i)=>i);
+    for(let i=shuffleOrder.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [shuffleOrder[i],shuffleOrder[j]]=[shuffleOrder[j],shuffleOrder[i]]; }
+    shufflePointer = 0;
+  }
+  buildShuffleOrder();
+
+  /* ---------- Playlist UI ---------- */
+  function buildPlaylist(){
+    playlistEl.innerHTML = '';
+    songs.forEach((s, i) => {
+      const li = document.createElement('li');
+      li.className = 'flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-white/5';
+      li.dataset.index = i;
+      li.innerHTML = `<svg class='w-5 h-5 text-rose-400' viewBox='0 0 24 24' fill='currentColor'><path d='M12 3v10.55A4 4 0 1014 17V7h4V3h-6z'/></svg><span class='truncate'>${s.name}</span>`;
+      li.addEventListener('click', ()=> loadSong(i, true));
+      playlistEl.appendChild(li);
+    });
+    highlightActive();
+  }
+  function highlightActive(){
+    [...playlistEl.children].forEach((li, i) => {
+      if(i === current) li.classList.add('bg-white/5','ring-1','ring-rose-500/30');
+      else li.classList.remove('bg-white/5','ring-1','ring-rose-500/30');
+    });
+  }
+
+  /* ---------- Player functions ---------- */
+  function loadSong(index, autoplay=false){
+    current = index;
+    const s = songs[index];
+    if(audio.src !== s.src) audio.src = s.src;
+    nowTitle.textContent = s.name;
+    highlightActive();
+    if(autoplay){ audio.play().catch((e)=>{ console.warn('Play prevented', e); }); }
+    updatePlayUI();
+    setupVisualizer();
+  }
+
+  function updatePlayUI(){
+    isPlaying = !audio.paused && !audio.ended && audio.currentTime > 0;
+    playBtn.textContent = isPlaying ? '⏸' : '▶';
+    // toggle disc spinning class
+    if(isPlaying) disc.classList.add('spinning'); else disc.classList.remove('spinning');
+  }
+
+  function nextTrack(){
+    if(shuffle){
+      if(shufflePointer >= shuffleOrder.length) buildShuffleOrder();
+      const n = shuffleOrder[shufflePointer++];
+      loadSong(n, true);
+    } else {
+      loadSong((current + 1) % songs.length, true);
+    }
+  }
+  function prevTrack(){
+    if(audio.currentTime > 2){ audio.currentTime = 0; } else {
+      loadSong((current - 1 + songs.length) % songs.length, true);
+    }
+  }
+
+  /* ---------- Seek & time ---------- */
+  function fmt(t){ if(!isFinite(t)) return '0:00'; const m = Math.floor(t/60); const s = Math.floor(t % 60); return `${m}:${s.toString().padStart(2,'0')}`; }
+  audio.addEventListener('timeupdate', ()=> { seek.value = (audio.currentTime / (audio.duration || 1)) * 100; cur.textContent = fmt(audio.currentTime); });
+  audio.addEventListener('loadedmetadata', ()=> { dur.textContent = fmt(audio.duration); });
+  audio.addEventListener('ended', ()=> nextTrack());
+  seek.addEventListener('input', ()=> { audio.currentTime = (seek.value / 100) * (audio.duration || 0); });
+
+  /* ---------- Visualizer ---------- */
+  function setupVisualizer(){
+    // initialize only once; if audioCtx exists but sourceNode missing, reconnect
+    try{
+      if(!audioCtx){
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        analyser = audioCtx.createAnalyser(); analyser.fftSize = 256;
+        bufferLength = analyser.frequencyBinCount; dataArray = new Uint8Array(bufferLength);
+        sourceNode = audioCtx.createMediaElementSource(audio);
+        sourceNode.connect(analyser); analyser.connect(audioCtx.destination);
+      } else if(!sourceNode){
+        sourceNode = audioCtx.createMediaElementSource(audio);
+        sourceNode.connect(analyser);
+      }
+      // start loop (cancel previous if any)
+      if(animationId) cancelAnimationFrame(animationId);
+      drawVisualizer();
+    }catch(e){ console.warn('AudioContext error', e); }
+  }
+  function drawVisualizer(){
+    if(!analyser) return;
+    analyser.getByteFrequencyData(dataArray);
+    const W = canvas.width = canvas.clientWidth * devicePixelRatio;
+    const H = canvas.height = 80 * devicePixelRatio;
+    ctx.clearRect(0,0,W,H);
+    const barWidth = (W / bufferLength) * 2.5;
+    let x = 0;
+    for(let i=0;i<bufferLength;i++){
+      const v = dataArray[i] / 255; const h = v * H;
+      const grd = ctx.createLinearGradient(0,0,0,H);
+      grd.addColorStop(0, 'rgba(255,77,109,0.95)');
+      grd.addColorStop(1, 'rgba(124,58,237,0.4)');
+      ctx.fillStyle = grd; ctx.fillRect(x, H-h, barWidth, h);
+      x += barWidth + 1;
+    }
+    animationId = requestAnimationFrame(drawVisualizer);
+  }
+
+  /* ---------- Sidebar toggle behavior ---------- */
+  function openSidebar(){
+    sidebar.classList.remove('translate-x-full');
+    if(window.innerWidth < 768){ overlay.classList.remove('pointer-events-none'); overlay.classList.add('opacity-100'); }
+  }
+  function closeSidebar(){
+    sidebar.classList.add('translate-x-full');
+    if(window.innerWidth < 768){ overlay.classList.add('pointer-events-none'); overlay.classList.remove('opacity-100'); }
+  }
+  function adjustSidebarOnResize(){
+    if(window.innerWidth < 768){
+      sidebar.classList.add('translate-x-full');
+      overlay.classList.add('pointer-events-none'); overlay.classList.remove('opacity-100');
+    } else {
+      sidebar.classList.remove('translate-x-full');
+      overlay.classList.add('pointer-events-none'); overlay.classList.remove('opacity-100');
+    }
+  }
+  menuBtn.addEventListener('click', ()=>{ if(sidebar.classList.contains('translate-x-full')) openSidebar(); else closeSidebar(); });
+  overlay.addEventListener('click', closeSidebar);
+
+  /* ---------- Controls bindings ---------- */
+  playBtn.addEventListener('click', ()=>{
+    if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    if(!audio.src) loadSong(current, false);
+    if(audio.paused) audio.play().catch(()=>{}); else audio.pause();
+    updatePlayUI();
+    // heart burst on play/pause (small, fast)
+    spawnPlayHearts();
+  });
+  prevBtn.addEventListener('click', ()=>{ prevTrack(); if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); });
+  nextBtn.addEventListener('click', ()=>{ nextTrack(); if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); });
+  shuffleBtn.addEventListener('click', ()=>{ shuffle = !shuffle; shuffleBtn.setAttribute('aria-pressed', String(shuffle)); if(shuffle) buildShuffleOrder(); });
+
+  // Keyboard shortcuts
+  window.addEventListener('keydown', (e)=> {
+    if(['INPUT','TEXTAREA','BUTTON','SELECT'].includes(e.target.tagName)) return;
+    if(e.code === 'Space'){ e.preventDefault(); if(audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); if(audio.paused) audio.play().catch(()=>{}); else audio.pause(); updatePlayUI(); spawnPlayHearts(); }
+    if(e.code === 'ArrowRight'){ nextTrack(); }
+    if(e.code === 'ArrowLeft'){ prevTrack(); }
+    if(e.key.toLowerCase() === 's'){ shuffle = !shuffle; shuffleBtn.setAttribute('aria-pressed', String(shuffle)); if(shuffle) buildShuffleOrder(); }
+  });
+
+  /* ---------- Hearts (romantic, reworked & faster) ---------- */
+  function spawnHeart(opts={}){
+    // cap concurrency for performance
+    if(heartsLayer.children.length >= 40) return;
+    const el = document.createElement('div');
+    el.className = 'heart';
+    const size = Math.round(10 + Math.random() * 18); // 10 - 28 px (faster feel)
+    el.style.width = size + 'px'; el.style.height = size + 'px';
+    const left = (opts.leftVW !== undefined) ? opts.leftVW : (Math.random() * 90 + 5);
+    el.style.left = left + 'vw';
+    const drift = Math.round((Math.random() * 140) - 70);
+    el.style.setProperty('--drift', drift + 'px');
+    const rot = Math.round((Math.random() * 30) - 15);
+    el.style.setProperty('--rot', (45 + rot) + 'deg');
+    const dur = (4 + Math.random() * 4).toFixed(2); // 4 - 8s (snappier)
+    el.style.animation = `gentleRise ${dur}s cubic-bezier(.2,.9,.3,1) forwards`;
+    heartsLayer.appendChild(el);
+    el.addEventListener('animationend', ()=> el.remove());
+  }
+
+  /* ---------- NEW: Extend GlowUp to also toggle aura ---------- */
+  function toggleGlow(){
+    glowOn = !glowOn;
+    glowBtn.textContent = glowOn ? '💔 Stop' : '💖 Glow Up';
+    // NEW: toggle the soft aura class on body
+    document.body.classList.toggle('glowup', glowOn);
+
+    if(glowOn){
+      // ensure no duplicate intervals
+      if(glowInterval) clearInterval(glowInterval);
+      const burst = window.innerWidth < 640 ? 8 : 14;
+      for(let i=0;i<burst;i++) setTimeout(spawnHeart, i * 70);
+      const rate = window.innerWidth < 640 ? 360 : 200; // faster spawning for more lively look
+      glowInterval = setInterval(spawnHeart, rate);
+    } else {
+      if(glowInterval) clearInterval(glowInterval); glowInterval = null;
+      const hearts = Array.from(heartsLayer.children);
+      hearts.forEach((h, idx) => {
+        h.style.transition = 'opacity 0.45s ease, transform 0.45s ease';
+        h.style.opacity = '0';
+        setTimeout(()=> h.remove(), 480 + idx*6);
+      });
+    }
+  }
+  glowBtn.addEventListener('click', toggleGlow);
+
+  /* ---------- Play/Pause small heart burst ---------- */
+  function spawnPlayHearts(){
+    const rect = playBtn.getBoundingClientRect();
+    for(let i=0;i<6;i++){
+      const h = document.createElement('div'); h.className='heart';
+      const size = 10 + Math.random()*12; h.style.width = h.style.height = size + 'px';
+      // position near button in vw coords
+      const vwLeft = (rect.left + rect.width/2) / window.innerWidth * 100;
+      h.style.left = vwLeft + 'vw';
+      h.style.setProperty('--drift', ((Math.random()-0.5)*120) + 'px');
+      h.style.setProperty('--rot', (45 + (Math.random()*30-15)) + 'deg');
+      const dur = 700 + Math.random()*500;
+      h.style.animation = `gentleRise ${ (dur/1000).toFixed(2) }s cubic-bezier(.2,.9,.3,1) forwards`;
+      heartsLayer.appendChild(h);
+      h.addEventListener('animationend', ()=> h.remove());
+    }
+  }
+
+  /* ---------- Message modal (typewriter) ---------- */
+  function typeWriter(text, el){
+    el.textContent = '';
+    let i = 0;
+    // clear previous
+    if(typingTimer) clearInterval(typingTimer);
+    el.setAttribute('data-typing','true');
+    typingTimer = setInterval(()=>{
+      el.textContent += text.charAt(i);
+      i++;
+      if(i >= text.length){ clearInterval(typingTimer); typingTimer = null; el.setAttribute('data-typing','false'); }
+    }, 28); // slightly faster typing
+  }
+  function openMsg(){
+    const m = messages[Math.floor(Math.random()*messages.length)];
+    msgModal.classList.remove('hidden'); msgModal.classList.add('flex');
+    typeWriter(m, messageText);
+  }
+  function closeMsgModal(){
+    msgModal.classList.add('hidden'); msgModal.classList.remove('flex');
+    messageText.textContent = ''; if(typingTimer) clearInterval(typingTimer); typingTimer = null; messageText.setAttribute('data-typing','false');
+  }
+  msgBtn.addEventListener('click', openMsg);
+  closeMsg.addEventListener('click', closeMsgModal);
+  msgModal.addEventListener('click', (e)=> { if(e.target === msgModal) closeMsgModal(); });
+
+  /* ---------- Initialize & events ---------- */
+  buildPlaylist();
+  loadSong(0, false);
+
+  function initSidebar(){
+    if(window.innerWidth < 768){
+      sidebar.classList.add('translate-x-full');
+      overlay.classList.add('pointer-events-none'); overlay.classList.remove('opacity-100');
+    } else {
+      sidebar.classList.remove('translate-x-full');
+      overlay.classList.add('pointer-events-none'); overlay.classList.remove('opacity-100');
+    }
+  }
+  initSidebar();
+
+  window.addEventListener('resize', ()=> { adjustSidebarOnResize(); if(analyser){ if(animationId) cancelAnimationFrame(animationId); drawVisualizer(); } });
+
+  /* ---------- NEW: Auto-start GlowUp after tagline cinematic ---------- */
+  // Tagline: delay 2s + 1.5s duration = ~3.5s total (title starts 0.5s earlier)
+  setTimeout(()=> { if(!glowOn) toggleGlow(); }, 3500);
+
+  </script>
+</body>
+</html>
