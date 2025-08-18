@@ -122,6 +122,11 @@
       50%  { filter: blur(54px); transform: scale(1.03); opacity: 1;   }
       100% { filter: blur(40px); transform: scale(1);   opacity: 0.9; }
     }
+
+    /* ------------- Small visual-only nudge for bottom buttons ------------- */
+    /* This uses transform so it does not reflow or affect other layout */
+    #bottomButtons { transform: translateY(12px); transition: transform .25s ease; }
+    @media (max-width:420px){ #bottomButtons { transform: translateY(8px); } }
   </style>
 </head>
 <body>
@@ -162,14 +167,10 @@
   <main class="pt-20 md:pr-80 px-4">
     <div class="max-w-2xl mx-auto">
 
-      <!-- NEW: Cinematic title + tagline -->
+      <!-- NEW: Cinematic title + tagline (tagline updated per request) -->
       <section class="title-section">
         <h1>Here’s A Mixtape for You</h1>
-        <p>
-          Whenever you want to find peace for a moment remember you come to me
-          <br>
-          <small>(only if I start throwing nonsense advice remember you can come to this page!)</small>
-        </p>
+        <p>whenever like a cinematic entrance</p>
       </section>
 
       <section class="playerCard glass rounded-3xl p-8 modalAura">
@@ -203,8 +204,8 @@
     </div>
   </main>
 
-  <!-- Bottom center buttons -->
-  <div class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3">
+  <!-- Bottom center buttons (ID added for nudge) -->
+  <div id="bottomButtons" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3">
     <button id="glowBtn" class="px-4 py-3 rounded-full bg-rose-600 hover:bg-rose-500 shadow-lg text-white font-semibold" aria-label="Toggle hearts glow">💖 Glow Up</button>
     <button id="msgBtn" class="px-4 py-3 rounded-full bg-rose-200/10 hover:bg-rose-500/20 border border-rose-600 text-rose-200" aria-label="Show special message">💌 Special Message</button>
   </div>
